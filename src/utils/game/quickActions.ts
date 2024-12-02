@@ -1,0 +1,129 @@
+import { getOpenAIClient } from '../openai/client';
+import { DifficultyManager } from './difficulty/manager';
+import { validateTokenAvailability } from '../tokens/validation';
+import type { Difficulty } from '../../types/game';
+import type { TokenMetrics } from '../openai/types';
+import type { TokenUsage } from '../tokens/types';
+
+const getQuickActionsPrompt = (difficulty: Difficulty) => {
+  const basePrompt = `Analyze the current narrative context and generate 1-3 relevant action suggestions. The number of actions should be based on the context.
+
+Guidelines:
+- Keep each action brief (2-4 words)
+- Vary approaches (observation, interaction, movement)
+- Format response as JSON: { "Actions": ["Action1", "Action2", "Action3"] }`;
+
+  switch (difficulty) {
+    case 'easy':
+      return `${basePrompt}\n\nFocus on clear, safe actions with obvious outcomes.`;
+    case 'normal':
+      return `${basePrompt}\n\nBalance safe and moderately risky actions.`;
+    case 'challenging':
+      return `${basePrompt}\n\nEmphasize strategic and potentially risky options.`;
+    case 'adaptive':
+      const difficultyManager = DifficultyManager.getInstance();
+      const config = difficultyManager.getConfig();
+      const adaptivePrompt = `${basePrompt}\n\nAdaptive Mode Guidelines:
+- Complexity Level: ${Math.round(config.narrative.complexity * 100)}%
+- Risk Level: ${Math.round(config.quickActions.riskLevel * 100)}%
+- Suggested Actions: ${config.quickActions.count}
+- Adjust action complexity and risk based on user performance
+- Scale challenge level progressively with success`;
+      return adaptivePrompt;
+    default:
+      return basePrompt;
+  }
+};
+
+const DEFAULT_ACTIONS: string[] = [];
+
+let lastNarrativeContext = '';
+let cachedActions: string[] = [];
+
+const updateTokenUsage = async (completion: any, onTokensUsed?: (metrics: TokenMetrics) => void) => {
+  if (onTokensUsed && completion.usage) {
+    await onTokensUsed({
+      totalTokens: completion.usage.total_tokens,
+      promptTokens: completion.usage.prompt_tokens,
+      completionTokens: completion.usage.completion_tokens,
+      timestamp: Date.now()
+    });
+  }
+};
+
+export const generateQuickActions = async (
+  narrativeContext: string,
+  difficulty: Difficulty = 'adaptive',
+  onTokensUsed?: (metrics: TokenMetrics) => void,
+  tokenUsage?: TokenUsage
+): Promise<string[]> => {
+  if (!narrativeContext) return DEFAULT_ACTIONS;
+
+  // Return cached actions if the narrative context hasn't changed
+  if (narrativeContext === lastNarrativeContext && cachedActions.length > 0) {
+    return cachedActions;
+  }
+
+  try {
+    // Early token validation
+    if (tokenUsage && !validateTokenAvailability(tokenUsage, 'QUICK_ACTIONS')) {
+      console.warn('Insufficient tokens for quick actions generation');
+      return DEFAULT_ACTIONS;
+    }
+
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: getQuickActionsPrompt(difficulty)
+        },
+        {
+          role: "user",
+          content: `Current narrative: ${narrativeContext}\n\nRespond with JSON containing contextually appropriate actions (1-3) in the format: { "Actions": ["Action1", "Action2", "Action3"] }`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 100,
+      response_format: { type: "json_object" }
+    });
+
+    await updateTokenUsage(completion, onTokensUsed);
+
+    try {
+      const content = completion.choices[0].message.content || '{"Actions": []}';
+      const response = JSON.parse(content);
+      
+      if (!response.Actions || !Array.isArray(response.Actions) || response.Actions.length === 0) {
+        console.warn('Invalid quick actions response format:', content);
+        return DEFAULT_ACTIONS;
+      }
+
+      const formattedActions = response.Actions.map(
+        action => action.charAt(0).toUpperCase() + action.slice(1)
+      );
+
+      // Cache the results
+      lastNarrativeContext = narrativeContext;
+      cachedActions = formattedActions;
+
+      return formattedActions;
+    } catch (parseError) {
+      console.error('Failed to parse quick actions response:', parseError);
+      return DEFAULT_ACTIONS;
+    }
+  } catch (error) {
+    console.error('Error generating quick actions:', error);
+    if (error instanceof Error && error.message.includes('Insufficient tokens')) {
+      return DEFAULT_ACTIONS;
+    }
+    return DEFAULT_ACTIONS;
+  }
+};
+
+// Clear cache when needed (e.g., when resetting game)
+export const clearQuickActionsCache = () => {
+  lastNarrativeContext = '';
+  cachedActions = [];
+};
