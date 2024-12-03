@@ -1,16 +1,17 @@
 import OpenAI from 'openai';
-import { createOpenAIError } from './errors';
+import { createOpenAIError } from './errors.js';
+import "dotenv/config";
 
 const OPENAI_CONFIG = {
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
   maxRetries: 3,
   timeout: 30000
 };
 
-let openaiClient: OpenAI | null = null;
+let openaiClient = null;
 
-export const getOpenAIClient = (): OpenAI => {
+export const getOpenAIClient = () => {
   if (!openaiClient) {
     if (!OPENAI_CONFIG.apiKey) {
       throw createOpenAIError({ message: 'OpenAI API key is not configured' });
@@ -25,9 +26,7 @@ export const getOpenAIClient = (): OpenAI => {
   return openaiClient;
 };
 
-export const handleOpenAIRequest = async <T>(
-  request: () => Promise<T>
-): Promise<T> => {
+export const handleOpenAIRequest = async (request) => {
   try {
     return await request();
   } catch (error) {

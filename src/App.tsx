@@ -12,51 +12,53 @@ import { InfoIcon } from './components/InfoIcon';
 import { TokenCounter } from './components/TokenCounter';
 import { TokenLimitModal } from './components/TokenLimitModal';
 import { validateTokenAvailability } from './utils/tokens/validation';
-import type { TokenMetrics } from './utils/openai/types';
+import type { TokenMetrics } from "./utils/tokens/types";
 
 export default function App() {
   const { usage, updateTokens, hasTokens } = useTokens();
   const [showLimitModal, setShowLimitModal] = useState(false);
 
-  const handleTokensUsed = useCallback(async (metrics: TokenMetrics) => {
-    try {
-      const success = await updateTokens({
-        total: metrics.totalTokens,
-        conversation: metrics.totalTokens,
-        timestamp: Date.now()
-      });
-
-      if (!success) {
+  const handleTokensUsed = useCallback(
+    async (metrics: TokenMetrics) => {
+      try {
+        const success = await updateTokens({
+          total: metrics.totalTokens,
+          conversation: metrics.totalTokens,
+          timestamp: Date.now(),
+        });
+        if (!success) {
+          setShowLimitModal(true);
+          throw new Error("Token limit exceeded");
+        }
+      } catch (error) {
         setShowLimitModal(true);
-        throw new Error('Token limit exceeded');
+        throw error;
       }
-    } catch (error) {
-      setShowLimitModal(true);
-      throw error;
-    }
-  }, [updateTokens]);
+    },
+    [updateTokens]
+  );
 
-  const { 
-    messages, 
-    isLoading, 
-    isGenerating, 
-    processMessage, 
-    gameState, 
-    resetGame, 
+  const {
+    messages,
+    isLoading,
+    isGenerating,
+    processMessage,
+    gameState,
+    resetGame,
     onTypewriterComplete,
     difficulty,
-    setDifficulty
+    setDifficulty,
   } = useGameState(handleTokensUsed, usage);
 
-  const { 
-    isMuted, 
-    volume, 
-    isLoaded, 
-    error, 
-    toggleMute, 
-    adjustVolume, 
-    startMusic, 
-    retryLoading 
+  const {
+    isMuted,
+    volume,
+    isLoaded,
+    error,
+    toggleMute,
+    adjustVolume,
+    startMusic,
+    retryLoading,
   } = useAudio();
 
   const hasCharacter = gameState.character !== null;
@@ -65,19 +67,22 @@ export default function App() {
     startMusic();
   }, [startMusic]);
 
-  const handleMessage = useCallback((message: string) => {
-    // Check if we have enough tokens for initial prompt
-    if (!validateTokenAvailability(usage, 'INITIAL_PROMPT')) {
-      setShowLimitModal(true);
-      return;
-    }
+  const handleMessage = useCallback(
+    (message: string) => {
+      // Check if we have enough tokens for initial prompt
+      if (!validateTokenAvailability(usage, "INITIAL_PROMPT")) {
+        setShowLimitModal(true);
+        return;
+      }
 
-    if (!hasTokens) {
-      setShowLimitModal(true);
-      return;
-    }
-    processMessage(message);
-  }, [hasTokens, processMessage, usage]);
+      if (!hasTokens) {
+        setShowLimitModal(true);
+        return;
+      }
+      processMessage(message);
+    },
+    [hasTokens, processMessage, usage]
+  );
 
   const handleReturnToMain = useCallback(() => {
     resetGame();
@@ -87,7 +92,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-dark opacity-80" />
-      
+
       <AudioControls
         isMuted={isMuted}
         volume={volume}
@@ -97,15 +102,13 @@ export default function App() {
         onVolumeChange={adjustVolume}
         retryLoading={retryLoading}
       />
-      
+
       <TokenCounter usage={usage} />
-      
+
       <div className="relative flex-1 flex flex-col max-w-3xl mx-auto w-full px-4">
         <AnimatePresence mode="wait">
-          {showLimitModal && (
-            <TokenLimitModal onReturn={handleReturnToMain} />
-          )}
-          
+          {showLimitModal && <TokenLimitModal onReturn={handleReturnToMain} />}
+
           {!hasCharacter ? (
             <MainPage
               key="main-page"
@@ -132,10 +135,10 @@ export default function App() {
                 onReturnToMain={handleReturnToMain}
               />
               <AnimatePresence>
-                {gameState.status === 'won' && (
+                {gameState.status === "won" && (
                   <Victory onRestart={resetGame} />
                 )}
-                {gameState.status === 'lost' && (
+                {gameState.status === "lost" && (
                   <GameOver onRestart={resetGame} />
                 )}
               </AnimatePresence>
@@ -143,7 +146,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-      
+
       <InfoIcon />
     </div>
   );

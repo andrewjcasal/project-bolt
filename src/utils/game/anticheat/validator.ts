@@ -1,5 +1,5 @@
-import { getOpenAIClient } from '../../openai/client';
-import type { TokenMetrics } from '../../openai/types';
+import { TokenMetrics } from "../../tokens/types";
+
 
 interface ValidationResponse {
   isValid: boolean;
@@ -25,23 +25,27 @@ export const validateInput = async (
   if (!input.trim()) return false;
 
   try {
-    const openai = getOpenAIClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: ANALYSIS_PROMPT
+    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
         },
-        {
-          role: "user",
-          content: `Analyze this input: ${input}`
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 150,
-      response_format: { type: "json_object" }
-    });
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: ANALYSIS_PROMPT
+            },
+            {
+              role: "user",
+              content: `Analyze this input: ${input}`
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 150,
+          response_format: { type: "json_object" }
+        })
+    }).then(response => response.json())
 
     if (onTokensUsed && completion.usage) {
       onTokensUsed({

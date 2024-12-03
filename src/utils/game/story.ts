@@ -1,4 +1,3 @@
-import { getOpenAIClient } from '../openai/client';
 import { validateInput } from './anticheat';
 import { SYSTEM_PROMPT, PROMPT_TEMPLATE, DEFAULT_PROMPT } from './constants';
 import { getDifficultyConfig } from './difficulty';
@@ -6,17 +5,21 @@ import type { GameResponse, Difficulty } from '../../types/game';
 
 export const generatePrompt = async (difficulty: Difficulty = 'adaptive'): Promise<string> => {
   try {
-    const openai = getOpenAIClient();
     const config = getDifficultyConfig(difficulty);
     
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        role: "system",
-        content: PROMPT_TEMPLATE
-      }],
-      ...config.parameters
-    });
+    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: "system",
+            content: PROMPT_TEMPLATE
+          }],
+          ...config.parameters
+        })
+    }).then(response => response.json())
 
     return completion.choices[0].message.content || DEFAULT_PROMPT;
   } catch (error) {
@@ -40,27 +43,31 @@ export const generateAIResponse = async (
   }
 
   try {
-    const openai = getOpenAIClient();
     const config = getDifficultyConfig(difficulty);
     
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `${SYSTEM_PROMPT}\n\n${config.instructions}`
+    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
         },
-        ...(context ? [{
-          role: "assistant",
-          content: context
-        }] : []),
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      ...config.parameters
-    });
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: `${SYSTEM_PROMPT}\n\n${config.instructions}`
+            },
+            ...(context ? [{
+              role: "assistant",
+              content: context
+            }] : []),
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          ...config.parameters
+        })
+    }).then(response => response.json())
 
     const text = completion.choices[0].message.content || "Something went wrong. Please try again.";
     

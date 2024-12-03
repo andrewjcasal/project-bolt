@@ -1,15 +1,13 @@
 export class OpenAIError extends Error {
   constructor(
-    message: string,
-    public status?: number,
-    public code?: string
+    message,
   ) {
     super(message);
     this.name = 'OpenAIError';
   }
 }
 
-export const createOpenAIError = (error: any): OpenAIError => {
+export const createOpenAIError = (error) => {
   const status = error?.response?.status;
   const code = error?.code;
   const message = error?.response?.data?.error?.message || error?.message;

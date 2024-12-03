@@ -11,18 +11,21 @@
   },
   "dependencies": {
     "@types/howler": "^2.2.11",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.6",
+    "express": "^4.21.1",
+    "framer-motion": "^10.16.4",
     "howler": "^2.2.4",
     "lucide-react": "0.294.0",
-    "openai": "4.20.1",
+    "openai": "^4.20.1",
     "react": "18.2.0",
     "react-canvas-confetti": "^1.4.0",
-    "react-dom": "18.2.0",
-    "framer-motion": "^10.16.4"
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.23.5",
     "@types/react": "18.2.15",
     "@types/react-dom": "18.2.7",
-    "@babel/plugin-proposal-decorators": "^7.23.5",
     "@typescript-eslint/eslint-plugin": "6.0.0",
     "@typescript-eslint/parser": "6.0.0",
     "@vitejs/plugin-react": "4.0.3",

@@ -1,12 +1,9 @@
-import { getOpenAIClient, handleOpenAIRequest } from '../openai/client';
 import { validateInput } from './anticheat';
 import { STORY_GUIDELINES, VICTORY_CONDITIONS, DEFEAT_CONDITIONS } from './story/guidelines';
 import { validateTokenAvailability } from '../tokens/validation';
-import { TOKEN_REQUIREMENTS } from '../tokens/constants';
 import type { GameResponse, Difficulty } from '../../types/game';
 import { DifficultyManager } from './difficulty/manager';
-import type { TokenMetrics } from '../openai/types';
-import type { TokenUsage } from '../tokens/types';
+import type { TokenMetrics, TokenUsage } from '../tokens/types';
 
 const SYSTEM_PROMPT = `${STORY_GUIDELINES}
 
@@ -47,20 +44,22 @@ export const generatePrompt = async (
 
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
-    const openai = getOpenAIClient();
-    
-    const completion = await handleOpenAIRequest(() => 
-      openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{
-          role: "system",
-          content: `${PROMPT_TEMPLATE}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
-        }],
-        ...config.parameters,
-        max_tokens: 150
-      })
-    );
 
+    const { completion } = await fetch('/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [{
+            role: "system",
+            content: `${PROMPT_TEMPLATE}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
+          }],
+          config,
+          max_tokens: 150
+        })
+    }).then(response => response.json())
+    
     await updateTokenUsage(completion, onTokensUsed);
     return completion.choices[0].message.content || DEFAULT_PROMPT;
   } catch (error) {
@@ -98,28 +97,30 @@ export const generateAIResponse = async (
 
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
-    const openai = getOpenAIClient();
     
-    const completion = await handleOpenAIRequest(() => 
-      openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `${SYSTEM_PROMPT}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
-          },
-          ...(context ? [{
-            role: "assistant",
-            content: context
-          }] : []),
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        ...config.parameters
-      })
-    );
+    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: `${SYSTEM_PROMPT}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
+            },
+            ...(context ? [{
+              role: "assistant",
+              content: context
+            }] : []),
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          ...config.parameters
+        })
+    }).then(response => response.json())
 
     await updateTokenUsage(completion, onTokensUsed);
 

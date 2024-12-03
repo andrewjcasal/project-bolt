@@ -1,9 +1,7 @@
-import { getOpenAIClient } from '../openai/client';
 import { DifficultyManager } from './difficulty/manager';
 import { validateTokenAvailability } from '../tokens/validation';
 import type { Difficulty } from '../../types/game';
-import type { TokenMetrics } from '../openai/types';
-import type { TokenUsage } from '../tokens/types';
+import type { TokenMetrics, TokenUsage } from '../tokens/types';
 
 const getQuickActionsPrompt = (difficulty: Difficulty) => {
   const basePrompt = `Analyze the current narrative context and generate 1-3 relevant action suggestions. The number of actions should be based on the context.
@@ -71,23 +69,27 @@ export const generateQuickActions = async (
       return DEFAULT_ACTIONS;
     }
 
-    const openai = getOpenAIClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: getQuickActionsPrompt(difficulty)
+    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
         },
-        {
-          role: "user",
-          content: `Current narrative: ${narrativeContext}\n\nRespond with JSON containing contextually appropriate actions (1-3) in the format: { "Actions": ["Action1", "Action2", "Action3"] }`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 100,
-      response_format: { type: "json_object" }
-    });
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: getQuickActionsPrompt(difficulty)
+            },
+            {
+              role: "user",
+              content: `Current narrative: ${narrativeContext}\n\nRespond with JSON containing contextually appropriate actions (1-3) in the format: { "Actions": ["Action1", "Action2", "Action3"] }`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 100,
+          response_format: { type: "json_object" }
+        })
+    }).then(response => response.json())
 
     await updateTokenUsage(completion, onTokensUsed);
 
