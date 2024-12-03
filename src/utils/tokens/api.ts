@@ -3,7 +3,7 @@ import type { TokenUsage } from './types';
 export const TokenAPI = {
   getUsage: async (deviceId: string): Promise<TokenUsage> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/tokens/usage/${deviceId}`);
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tokens/usage/${deviceId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch token usage');
       }
@@ -16,7 +16,7 @@ export const TokenAPI = {
 
   updateUsage: async (deviceId: string, tokens: number): Promise<TokenUsage> => {
     try {
-      const response = await fetch(`http://localhost:3000/api/tokens/usage/${deviceId}`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tokens/usage/${deviceId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
