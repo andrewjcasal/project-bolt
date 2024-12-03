@@ -2,6 +2,7 @@ import express from 'express';
 import { getOpenAIClient, handleOpenAIRequest } from './server/openai/client.js';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
 const openai = getOpenAIClient();
 

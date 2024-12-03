@@ -12,8 +12,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.46.2",
     "@types/howler": "^2.2.11",
-    "@supabase/supabase-js": "^2.39.0",
+    "concurrently": "^8.2.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.6",
     "express": "^4.21.1",
@@ -23,8 +24,7 @@
     "openai": "^4.20.1",
     "react": "18.2.0",
     "react-canvas-confetti": "^1.4.0",
-    "react-dom": "18.2.0",
-    "concurrently": "^8.2.2"
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.23.5",
