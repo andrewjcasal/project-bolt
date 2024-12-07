@@ -38,8 +38,22 @@ const DEFAULT_ACTIONS: string[] = [];
 let lastNarrativeContext = '';
 let cachedActions: string[] = [];
 
+const handleApiResponse = async (response: Response) => {
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+  
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Failed to parse API response:', text);
+    throw new Error('Invalid API response format');
+  }
+};
+
 const updateTokenUsage = async (completion: any, onTokensUsed?: (metrics: TokenMetrics) => void) => {
-  if (onTokensUsed && completion.usage) {
+  if (onTokensUsed && completion?.usage) {
     await onTokensUsed({
       totalTokens: completion.usage.total_tokens,
       promptTokens: completion.usage.prompt_tokens,
@@ -57,44 +71,49 @@ export const generateQuickActions = async (
 ): Promise<string[]> => {
   if (!narrativeContext) return DEFAULT_ACTIONS;
 
-  // Return cached actions if the narrative context hasn't changed
   if (narrativeContext === lastNarrativeContext && cachedActions.length > 0) {
     return cachedActions;
   }
 
   try {
-    // Early token validation
     if (tokenUsage && !validateTokenAvailability(tokenUsage, 'QUICK_ACTIONS')) {
       console.warn('Insufficient tokens for quick actions generation');
       return DEFAULT_ACTIONS;
     }
 
-    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: getQuickActionsPrompt(difficulty)
-            },
-            {
-              role: "user",
-              content: `Current narrative: ${narrativeContext}\n\nRespond with JSON containing contextually appropriate actions (1-3) in the format: { "Actions": ["Action1", "Action2", "Action3"] }`
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 100,
-          response_format: { type: "json_object" }
-        })
-    }).then(response => response.json())
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: getQuickActionsPrompt(difficulty)
+          },
+          {
+            role: "user",
+            content: `Current narrative: ${narrativeContext}\n\nRespond with JSON containing contextually appropriate actions (1-3) in the format: { "Actions": ["Action1", "Action2", "Action3"] }`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 100,
+        response_format: { type: "json_object" }
+      })
+    });
 
-    await updateTokenUsage(completion, onTokensUsed);
+    const data = await handleApiResponse(response);
+    
+    if (!data?.completion?.choices?.[0]?.message?.content) {
+      console.warn('Invalid API response structure:', data);
+      return DEFAULT_ACTIONS;
+    }
+
+    await updateTokenUsage(data.completion, onTokensUsed);
 
     try {
-      const content = completion.choices[0].message.content || '{"Actions": []}';
+      const content = data.completion.choices[0].message.content;
       const response = JSON.parse(content);
       
       if (!response.Actions || !Array.isArray(response.Actions) || response.Actions.length === 0) {
@@ -106,7 +125,6 @@ export const generateQuickActions = async (
         action => action.charAt(0).toUpperCase() + action.slice(1)
       );
 
-      // Cache the results
       lastNarrativeContext = narrativeContext;
       cachedActions = formattedActions;
 
@@ -124,7 +142,6 @@ export const generateQuickActions = async (
   }
 };
 
-// Clear cache when needed (e.g., when resetting game)
 export const clearQuickActionsCache = () => {
   lastNarrativeContext = '';
   cachedActions = [];

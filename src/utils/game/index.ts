@@ -22,13 +22,28 @@ Guidelines:
 const DEFAULT_PROMPT = "A merchant in an ancient bazaar must break a mysterious curse.";
 
 const updateTokenUsage = async (completion: any, onTokensUsed?: (metrics: TokenMetrics) => void) => {
-  if (onTokensUsed && completion.usage) {
+  if (onTokensUsed && completion?.usage) {
     await onTokensUsed({
       totalTokens: completion.usage.total_tokens,
       promptTokens: completion.usage.prompt_tokens,
       completionTokens: completion.usage.completion_tokens,
       timestamp: Date.now()
     });
+  }
+};
+
+const handleApiResponse = async (response: Response) => {
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+  }
+  
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Failed to parse API response:', text);
+    throw new Error('Invalid API response format');
   }
 };
 
@@ -45,23 +60,30 @@ export const generatePrompt = async (
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
 
-    const { completion } = await fetch('/api/generate-game-prompt', {
+    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [{
-            role: "system",
-            content: `${PROMPT_TEMPLATE}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
-          }],
-          config,
-          max_tokens: 150
-        })
-    }).then(response => response.json())
+      },
+      body: JSON.stringify({
+        messages: [{
+          role: "system",
+          content: `${PROMPT_TEMPLATE}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
+        }],
+        config,
+        max_tokens: 150
+      })
+    });
+
+    const data = await handleApiResponse(response);
     
-    await updateTokenUsage(completion, onTokensUsed);
-    return completion.choices[0].message.content || DEFAULT_PROMPT;
+    if (!data?.completion?.choices?.[0]?.message?.content) {
+      console.error('Invalid API response structure:', data);
+      return DEFAULT_PROMPT;
+    }
+
+    await updateTokenUsage(data.completion, onTokensUsed);
+    return data.completion.choices[0].message.content;
   } catch (error) {
     console.error('Error generating prompt:', error);
     return DEFAULT_PROMPT;
@@ -77,11 +99,9 @@ export const generateAIResponse = async (
 ): Promise<GameResponse> => {
   try {
     if (tokenUsage) {
-      // Check tokens for anti-cheat
       if (!validateTokenAvailability(tokenUsage, 'ANTI_CHEAT')) {
         throw new Error('Insufficient tokens for anti-cheat validation');
       }
-      // Check tokens for story response
       if (!validateTokenAvailability(tokenUsage, 'STORY_RESPONSE')) {
         throw new Error('Insufficient tokens for story response');
       }
@@ -98,34 +118,39 @@ export const generateAIResponse = async (
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
     
-    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `${SYSTEM_PROMPT}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
-            },
-            ...(context ? [{
-              role: "assistant",
-              content: context
-            }] : []),
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          ...config.parameters
-        })
-    }).then(response => response.json())
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: `${SYSTEM_PROMPT}\n\nDifficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}${config.instructions}`
+          },
+          ...(context ? [{
+            role: "assistant",
+            content: context
+          }] : []),
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        ...config.parameters
+      })
+    });
 
-    await updateTokenUsage(completion, onTokensUsed);
-
-    const text = completion.choices[0].message.content || "Something went wrong. Please try again.";
+    const data = await handleApiResponse(response);
     
+    if (!data?.completion?.choices?.[0]?.message?.content) {
+      throw new Error('Invalid API response structure');
+    }
+
+    await updateTokenUsage(data.completion, onTokensUsed);
+
+    const text = data.completion.choices[0].message.content;
     const isVictory = text.includes("You have successfully completed your quest");
     const isDefeat = text.includes("You have ultimately failed in your quest");
     

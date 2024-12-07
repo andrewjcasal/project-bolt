@@ -11,9 +11,9 @@ const port = 3000;
 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your Vite app's origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-  credentials: true // If you're using cookies or sessions
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
 }));
 
 app.get('/', (req, res) => {
@@ -30,7 +30,7 @@ app.post('/api/generate-game-prompt', async (req, res) => {
   try {
     const completion = await handleOpenAIRequest(() => 
       openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4-turbo-preview",
         messages,
         ...config.parameters,
         max_tokens,
@@ -41,6 +41,7 @@ app.post('/api/generate-game-prompt', async (req, res) => {
     res.send({completion});
   } catch (error) {
     console.error('Error generating game prompt:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -74,7 +75,6 @@ const validateTokens = (tokens) => {
   return numTokens;
 };
 
-// Add these new endpoints to your Express app
 app.get('/api/tokens/usage/:deviceId', async (req, res) => {
   try {
     const { deviceId } = req.params;
@@ -92,7 +92,7 @@ app.get('/api/tokens/usage/:deviceId', async (req, res) => {
       const initial = getDefaultUsage();
       const { data: newToken, error: insertError } = await supabase
         .from('tokens')
-        .insert([{ device_id: deviceId, ...initial }])
+        .upsert([{ device_id: deviceId, ...initial }])
         .select()
         .single();
         
@@ -135,15 +135,19 @@ app.post('/api/tokens/usage/:deviceId', async (req, res) => {
     if (getError && getError.code !== 'PGRST116') throw getError;
     
     if (!current) {
-      // Create new record if none exists
+      // Create new record using upsert
       const initial = getDefaultUsage();
-      const { data: newToken, error: insertError } = await supabase
+      const { data: newToken, error: upsertError } = await supabase
         .from('tokens')
-        .insert([{ device_id: deviceId, ...initial }])
+        .upsert([{ 
+          device_id: deviceId, 
+          ...initial,
+          used: validTokens 
+        }])
         .select()
         .single();
         
-      if (insertError) throw insertError;
+      if (upsertError) throw upsertError;
       return res.json(newToken);
     }
 

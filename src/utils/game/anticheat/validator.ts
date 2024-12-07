@@ -1,6 +1,5 @@
 import { TokenMetrics } from "../../tokens/types";
 
-
 interface ValidationResponse {
   isValid: boolean;
   reason: string | null;
@@ -25,27 +24,27 @@ export const validateInput = async (
   if (!input.trim()) return false;
 
   try {
-    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+    const { completion } = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: ANALYSIS_PROMPT
-            },
-            {
-              role: "user",
-              content: `Analyze this input: ${input}`
-            }
-          ],
-          temperature: 0.3,
-          max_tokens: 150,
-          response_format: { type: "json_object" }
-        })
-    }).then(response => response.json())
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: ANALYSIS_PROMPT
+          },
+          {
+            role: "user",
+            content: `Analyze this input: ${input}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 150,
+        response_format: { type: "json_object" }
+      })
+    }).then(response => response.json());
 
     if (onTokensUsed && completion.usage) {
       onTokensUsed({

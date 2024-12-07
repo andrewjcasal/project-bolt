@@ -7,6 +7,12 @@ interface TokenLimitModalProps {
 }
 
 export const TokenLimitModal: React.FC<TokenLimitModalProps> = ({ onReturn }) => {
+  const handleReturn = () => {
+    if (onReturn) {
+      onReturn();
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -26,7 +32,7 @@ export const TokenLimitModal: React.FC<TokenLimitModalProps> = ({ onReturn }) =>
           You've reached your daily energy limit. Your adventure will continue tomorrow with fresh energy!
         </p>
         <button
-          onClick={onReturn}
+          onClick={handleReturn}
           className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg transition-colors duration-200"
         >
           Back to Main Page

@@ -69,7 +69,6 @@ export default function App() {
 
   const handleMessage = useCallback(
     (message: string) => {
-      // Check if we have enough tokens for initial prompt
       if (!validateTokenAvailability(usage, "INITIAL_PROMPT")) {
         setShowLimitModal(true);
         return;
