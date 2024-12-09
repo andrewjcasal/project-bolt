@@ -4,6 +4,7 @@ import { validateTokenAvailability } from '../tokens/validation';
 import type { GameResponse, Difficulty } from '../../types/game';
 import { DifficultyManager } from './difficulty/manager';
 import type { TokenMetrics, TokenUsage } from '../tokens/types';
+import { getApiBaseUrl } from '../api';
 
 const SYSTEM_PROMPT = `${STORY_GUIDELINES}
 
@@ -60,7 +61,7 @@ export const generatePrompt = async (
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
 
-    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
+    const response = await fetch(`${getApiBaseUrl()}/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -118,7 +119,7 @@ export const generateAIResponse = async (
     const difficultyManager = DifficultyManager.getInstance();
     const config = difficultyManager.getConfig();
     
-    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
+    const response = await fetch(`${getApiBaseUrl()}/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

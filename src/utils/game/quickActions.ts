@@ -2,6 +2,7 @@ import { DifficultyManager } from './difficulty/manager';
 import { validateTokenAvailability } from '../tokens/validation';
 import type { Difficulty } from '../../types/game';
 import type { TokenMetrics, TokenUsage } from '../tokens/types';
+import { getApiBaseUrl } from '../api';
 
 const getQuickActionsPrompt = (difficulty: Difficulty) => {
   const basePrompt = `Analyze the current narrative context and generate 1-3 relevant action suggestions. The number of actions should be based on the context.
@@ -81,7 +82,7 @@ export const generateQuickActions = async (
       return DEFAULT_ACTIONS;
     }
 
-    const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
+    const response = await fetch(`${getApiBaseUrl()}/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

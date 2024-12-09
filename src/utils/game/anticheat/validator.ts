@@ -1,4 +1,5 @@
 import { TokenMetrics } from "../../tokens/types";
+import { getApiBaseUrl } from '../../api';
 
 interface ValidationResponse {
   isValid: boolean;
@@ -24,7 +25,7 @@ export const validateInput = async (
   if (!input.trim()) return false;
 
   try {
-    const { completion } = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/generate-game-prompt`, {
+    const { completion } = await fetch(`${getApiBaseUrl()}/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
