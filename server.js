@@ -11,7 +11,7 @@ const port = 3000;
 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: process.env.CONTEXT === 'production' ? 'https://peppy-cassata-b91b8e.netlify.app' : 'http://localhost:8888',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
