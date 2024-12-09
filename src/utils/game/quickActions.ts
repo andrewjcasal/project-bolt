@@ -123,7 +123,7 @@ export const generateQuickActions = async (
       }
 
       const formattedActions = response.Actions.map(
-        action => action.charAt(0).toUpperCase() + action.slice(1)
+        (action: string) => action.charAt(0).toUpperCase() + action.slice(1)
       );
 
       lastNarrativeContext = narrativeContext;

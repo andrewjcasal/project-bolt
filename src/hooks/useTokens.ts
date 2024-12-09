@@ -32,10 +32,19 @@ export const useTokens = () => {
       }
 
       const sanitizedMetrics = sanitizeTokenMetrics(metrics);
+      
+      if (usage.used + sanitizedMetrics.totalTokens > usage.limit) {
+        setError('Token limit reached');
+        return false;
+      }
+
       const deviceId = getDeviceId();
       const updated = await updateTokenUsage(deviceId, sanitizedMetrics.totalTokens);
       
-      setUsage(updated);
+      setUsage({
+        ...updated,
+        used: Math.max(0, updated.used)
+      });
       setError(null);
       return updated.used < updated.limit;
     } catch (err) {
@@ -44,7 +53,7 @@ export const useTokens = () => {
       console.error(errorMessage, err);
       return false;
     }
-  }, []);
+  }, [usage.used, usage.limit]);
 
   useEffect(() => {
     fetchUsage();

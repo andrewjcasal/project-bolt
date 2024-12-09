@@ -39,22 +39,12 @@ export const validateTokenMetrics = (metrics: any): metrics is TokenMetrics => {
 };
 
 export const sanitizeTokenMetrics = (metrics: TokenMetrics): TokenMetrics => {
-  const sanitized: TokenMetrics = {
-    totalTokens: validateTokens(metrics.totalTokens),
-    timestamp: metrics.timestamp || Date.now()
+  return {
+    ...metrics,
+    totalTokens: Math.max(0, Number(metrics.totalTokens) || 0),
+    promptTokens: Math.max(0, Number(metrics.promptTokens) || 0),
+    completionTokens: Math.max(0, Number(metrics.completionTokens) || 0)
   };
-
-  if (metrics.promptTokens !== undefined) {
-    sanitized.promptTokens = validateTokens(metrics.promptTokens);
-  }
-  if (metrics.completionTokens !== undefined) {
-    sanitized.completionTokens = validateTokens(metrics.completionTokens);
-  }
-  if (metrics.conversation !== undefined) {
-    sanitized.conversation = validateTokens(metrics.conversation);
-  }
-
-  return sanitized;
 };
 
 export const hasEnoughTokens = (

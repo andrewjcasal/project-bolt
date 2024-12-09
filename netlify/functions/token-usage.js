@@ -27,7 +27,7 @@ const validateTokens = (tokens) => {
   if (isNaN(numTokens) || numTokens < 0) {
     throw new Error('Invalid token count');
   }
-  return numTokens;
+  return Math.max(0, numTokens);
 };
 
 exports.handler = async (event, context) => {
@@ -132,7 +132,7 @@ exports.handler = async (event, context) => {
 
       const updated = {
         ...current,
-        used: current.used + validTokens
+        used: Math.max(0, current.used + validTokens)
       };
 
       const { error: updateError } = await supabase
