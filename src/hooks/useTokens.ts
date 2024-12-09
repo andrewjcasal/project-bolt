@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { TokenAPI } from '../utils/tokens/api';
+import { getTokenUsage, updateTokenUsage } from '../utils/tokens/api';
 import { getDeviceId } from '../utils/tokens/device';
 import { validateTokenMetrics, sanitizeTokenMetrics } from '../utils/tokens/validation';
 import type { TokenUsage, TokenMetrics } from '../utils/tokens/types';
@@ -15,7 +15,7 @@ export const useTokens = () => {
   const fetchUsage = useCallback(async () => {
     try {
       const deviceId = getDeviceId();
-      const data = await TokenAPI.getUsage(deviceId);
+      const data = await getTokenUsage(deviceId);
       setUsage(data);
       setError(null);
     } catch (err) {
@@ -33,7 +33,7 @@ export const useTokens = () => {
 
       const sanitizedMetrics = sanitizeTokenMetrics(metrics);
       const deviceId = getDeviceId();
-      const updated = await TokenAPI.updateUsage(deviceId, sanitizedMetrics.totalTokens);
+      const updated = await updateTokenUsage(deviceId, sanitizedMetrics.totalTokens);
       
       setUsage(updated);
       setError(null);

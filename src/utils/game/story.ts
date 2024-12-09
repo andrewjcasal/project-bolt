@@ -1,9 +1,17 @@
 import { validateInput } from './anticheat';
-import { SYSTEM_PROMPT, PROMPT_TEMPLATE, DEFAULT_PROMPT } from './constants';
-import { getDifficultyConfig } from './difficulty';
 import type { GameResponse, Difficulty } from '../../types/game';
 
-export const generatePrompt = async (messages, config = {}) => {
+interface Messages {
+  role: string;
+  content: string;
+}
+
+interface Config {
+  parameters?: Record<string, any>;
+  instructions?: string;
+}
+
+export const generatePrompt = async (messages: Messages[], config: Config = {}) => {
   const baseUrl = process.env.NODE_ENV === 'production' 
     ? '/.netlify/functions'
     : 'http://localhost:8888/.netlify/functions';
@@ -18,7 +26,6 @@ export const generatePrompt = async (messages, config = {}) => {
       body: JSON.stringify({
         messages,
         config,
-        // Include any other parameters you're sending
       }),
     });
 
@@ -49,31 +56,33 @@ export const generateAIResponse = async (
   }
 
   try {
-    const config = getDifficultyConfig(difficulty);
-    
-    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? '/.netlify/functions'
+      : 'http://localhost:8888/.netlify/functions';
+
+    const { completion } = await fetch(`${baseUrl}/generate-game-prompt`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `${SYSTEM_PROMPT}\n\n${config.instructions}`
-            },
-            ...(context ? [{
-              role: "assistant",
-              content: context
-            }] : []),
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          ...config.parameters
-        })
-    }).then(response => response.json())
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: `${difficulty === 'adaptive' ? 'Adaptive mode' : difficulty} difficulty`
+          },
+          ...(context ? [{
+            role: "assistant",
+            content: context
+          }] : []),
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+      })
+    }).then(response => response.json());
 
     const text = completion.choices[0].message.content || "Something went wrong. Please try again.";
     
