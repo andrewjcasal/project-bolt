@@ -1,37 +1,48 @@
 import type { TokenUsage } from './types';
 
-export const TokenAPI = {
-  getUsage: async (deviceId: string): Promise<TokenUsage> => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tokens/usage/${deviceId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch token usage');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting token usage:', error);
-      throw error;
-    }
-  },
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/.netlify/functions'
+  : 'http://localhost:8888/.netlify/functions';
 
-  updateUsage: async (deviceId: string, tokens: number): Promise<TokenUsage> => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/tokens/usage/${deviceId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tokens }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update token usage');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating token usage:', error);
-      throw error;
+export const getTokenUsage = async (deviceId: string) => {
+  try {
+    const response = await fetch(`${BASE_URL}/token-usage/${deviceId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch token usage');
     }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching token usage:', error);
+    throw error;
+  }
+};
+
+export const updateTokenUsage = async (deviceId: string, tokens: number) => {
+  try {
+    const response = await fetch(`${BASE_URL}/token-usage/${deviceId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ tokens }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update token usage');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating token usage:', error);
+    throw error;
   }
 };

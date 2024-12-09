@@ -3,28 +3,34 @@ import { SYSTEM_PROMPT, PROMPT_TEMPLATE, DEFAULT_PROMPT } from './constants';
 import { getDifficultyConfig } from './difficulty';
 import type { GameResponse, Difficulty } from '../../types/game';
 
-export const generatePrompt = async (difficulty: Difficulty = 'adaptive'): Promise<string> => {
+export const generatePrompt = async (messages, config = {}) => {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? '/.netlify/functions'
+    : 'http://localhost:8888/.netlify/functions';
+
   try {
-    const config = getDifficultyConfig(difficulty);
-    
-    const { completion } = await fetch('http://localhost:3000/api/generate-game-prompt', {
+    const response = await fetch(`${baseUrl}/generate-game-prompt`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messages: [{
-            role: "system",
-            content: PROMPT_TEMPLATE
-          }],
-          ...config.parameters
-        })
-    }).then(response => response.json())
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        messages,
+        config,
+        // Include any other parameters you're sending
+      }),
+    });
 
-    return completion.choices[0].message.content || DEFAULT_PROMPT;
+    if (!response.ok) {
+      throw new Error('Failed to generate prompt');
+    }
+
+    const data = await response.json();
+    return data.completion;
   } catch (error) {
     console.error('Error generating prompt:', error);
-    return DEFAULT_PROMPT;
+    throw error;
   }
 };
 
