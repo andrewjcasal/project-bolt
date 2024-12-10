@@ -1,12 +1,8 @@
-import type { TokenUsage } from './types';
-
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '/.netlify/functions'
-  : 'http://localhost:8888/.netlify/functions';
+import { getApiBaseUrl } from '../api';
 
 export const getTokenUsage = async (deviceId: string) => {
   try {
-    const response = await fetch(`${BASE_URL}/token-usage/${deviceId}`, {
+    const response = await fetch(`${getApiBaseUrl()}/token-usage/${deviceId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -27,7 +23,7 @@ export const getTokenUsage = async (deviceId: string) => {
 
 export const updateTokenUsage = async (deviceId: string, tokens: number) => {
   try {
-    const response = await fetch(`${BASE_URL}/token-usage/${deviceId}`, {
+    const response = await fetch(`${getApiBaseUrl()}/token-usage/${deviceId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

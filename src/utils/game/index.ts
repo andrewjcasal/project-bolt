@@ -1,6 +1,7 @@
 import { validateInput } from './anticheat';
 import { STORY_GUIDELINES, VICTORY_CONDITIONS, DEFEAT_CONDITIONS } from './story/guidelines';
 import { validateTokenAvailability } from '../tokens/validation';
+import { TOKEN_ERROR_MESSAGES } from '../tokens/constants';
 import type { GameResponse, Difficulty } from '../../types/game';
 import { DifficultyManager } from './difficulty/manager';
 import type { TokenMetrics, TokenUsage } from '../tokens/types';
@@ -55,7 +56,7 @@ export const generatePrompt = async (
 ): Promise<string> => {
   try {
     if (tokenUsage && !validateTokenAvailability(tokenUsage, 'PROMPT_GENERATION')) {
-      throw new Error('Insufficient tokens for prompt generation');
+      throw new Error(TOKEN_ERROR_MESSAGES.INSUFFICIENT_TOKENS);
     }
 
     const difficultyManager = DifficultyManager.getInstance();
@@ -101,10 +102,10 @@ export const generateAIResponse = async (
   try {
     if (tokenUsage) {
       if (!validateTokenAvailability(tokenUsage, 'ANTI_CHEAT')) {
-        throw new Error('Insufficient tokens for anti-cheat validation');
+        throw new Error(TOKEN_ERROR_MESSAGES.INSUFFICIENT_TOKENS);
       }
       if (!validateTokenAvailability(tokenUsage, 'STORY_RESPONSE')) {
-        throw new Error('Insufficient tokens for story response');
+        throw new Error(TOKEN_ERROR_MESSAGES.INSUFFICIENT_TOKENS);
       }
     }
 
@@ -163,12 +164,12 @@ export const generateAIResponse = async (
     console.error('Error generating AI response:', error);
     if (error instanceof Error && error.message.includes('Insufficient tokens')) {
       return {
-        text: "You don't have enough energy to continue. Please wait for your daily energy to reset.",
+        text: TOKEN_ERROR_MESSAGES.INSUFFICIENT_TOKENS,
         status: 'playing'
       };
     }
     return {
-      text: "Something went wrong. Please try again.",
+      text: TOKEN_ERROR_MESSAGES.GENERAL_ERROR,
       status: 'playing'
     };
   }

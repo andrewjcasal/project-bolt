@@ -1,12 +1,12 @@
 import React from 'react';
 import { TypewriterText } from './TypewriterText';
 import { InputArea } from './InputArea';
-import { QuickActionPrompts } from './QuickActionPrompts';
-import { TokenLimitScreen } from './TokenLimitScreen';
+import { QuickActionPrompts } from "./QuickActionPrompts";
 import { Message, Difficulty } from '../types/game';
 import { motion } from 'framer-motion';
 import { validateTokenAvailability } from '../utils/tokens/validation';
 import type { TokenUsage } from '../utils/tokens/types';
+import { TokenLimitModal } from "./TokenLimitModal";
 
 interface GamePageProps {
   messages: Message[];
@@ -77,7 +77,7 @@ export const GamePage: React.FC<GamePageProps> = ({
         <div className="space-y-4 mt-16 mb-24 sm:mt-20 sm:mb-28">
           {messages.map((message, index) => (
             <div key={`${message.content}-${index}`} className="px-2 sm:px-0">
-              <TypewriterText 
+              <TypewriterText
                 text={message.content}
                 onComplete={onTypewriterComplete}
               />
@@ -85,22 +85,22 @@ export const GamePage: React.FC<GamePageProps> = ({
           ))}
         </div>
       </div>
-      
-      {gameStatus === 'playing' && (
+
+      {gameStatus === "playing" && (
         <>
           {!hasEnoughTokens ? (
-            <TokenLimitScreen onReturn={onReturnToMain} />
+            <TokenLimitModal onReturn={onReturnToMain} />
           ) : (
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
               <div className="w-full max-w-2xl mx-auto px-2 sm:px-4">
                 <QuickActionPrompts
-                  currentPrompt={messages[messages.length - 1]?.content || ''}
+                  currentPrompt={messages[messages.length - 1]?.content || ""}
                   onActionSelect={handleQuickAction}
                   isDisabled={isLoading || isGenerating}
                   difficulty={difficulty}
                   tokenUsage={tokenUsage}
                 />
-                <InputArea 
+                <InputArea
                   onSend={onSend}
                   isLoading={isLoading}
                   isGenerating={isGenerating}

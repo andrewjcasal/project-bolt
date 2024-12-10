@@ -1,14 +1,6 @@
 import { TOKEN_REQUIREMENTS, MINIMUM_TOKENS_REQUIRED } from './constants';
 import type { TokenMetrics, TokenUsage } from './types';
 
-export const validateTokens = (tokens: number): number => {
-  if (!Number.isFinite(tokens) || tokens < 0) {
-    console.warn('Invalid token value detected:', tokens);
-    return 0;
-  }
-  return Math.floor(tokens);
-};
-
 export const validateTokenMetrics = (metrics: any): metrics is TokenMetrics => {
   if (!metrics || typeof metrics !== 'object') {
     console.error('Invalid metrics object:', metrics);
@@ -47,7 +39,7 @@ export const sanitizeTokenMetrics = (metrics: TokenMetrics): TokenMetrics => {
   };
 };
 
-export const hasEnoughTokens = (
+const hasEnoughTokens = (
   usage: TokenUsage,
   requiredTokens: number
 ): boolean => {

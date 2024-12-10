@@ -4,8 +4,8 @@ import { generateAIResponse } from '../utils/game';
 import { DifficultyManager } from '../utils/game/difficulty/manager';
 import { clearQuickActionsCache } from '../utils/game/quickActions';
 import type { DifficultyLevel } from '../utils/game/difficulty/types';
-import type { TokenMetrics } from '../utils/openai/types';
-import type { TokenUsage } from '../utils/tokens/types';
+import type { TokenMetrics, TokenUsage } from '../utils/tokens/types';
+import { TOKEN_ERROR_MESSAGES } from '../utils/tokens/constants';
 
 const initialState: GameState = {
   character: null,
@@ -99,8 +99,8 @@ export const useGameState = (
       setMessages([{
         role: 'assistant',
         content: error instanceof Error && error.message.includes('Insufficient tokens')
-          ? "You don't have enough energy to continue. Please wait for your daily energy to reset."
-          : 'Something went wrong. Please try again.'
+          ? TOKEN_ERROR_MESSAGES.INSUFFICIENT_TOKENS
+          : TOKEN_ERROR_MESSAGES.GENERAL_ERROR
       }]);
     }
   }, [gameState, isLoading, isGenerating, difficulty, onTokensUsed, tokenUsage]);
