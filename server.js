@@ -26,7 +26,7 @@ app.post('/api/generate-game-prompt', async (req, res) => {
   try {
     const completion = await handleOpenAIRequest(() => 
       openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o-mini",
         messages,
         ...config.parameters,
         max_tokens,

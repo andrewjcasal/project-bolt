@@ -16,7 +16,7 @@ exports.handler = async (event, context) => {
 
     const completion = await handleOpenAIRequest(() => 
       openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "gpt-4o-mini",
         messages,
         ...config.parameters,
         max_tokens,
