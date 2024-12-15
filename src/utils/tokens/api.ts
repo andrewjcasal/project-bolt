@@ -33,6 +33,10 @@ export const updateTokenUsage = async (deviceId: string, tokens: number) => {
     });
 
     if (!response.ok) {
+      const data = await response.json();
+      if (response.status === 400 && data.error.includes('Token limit')) {
+        throw new Error('Token limit would be exceeded');
+      }
       throw new Error('Failed to update token usage');
     }
 

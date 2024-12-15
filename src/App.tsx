@@ -22,16 +22,18 @@ export default function App() {
     async (metrics: TokenMetrics) => {
       try {
         const success = await updateTokens({
-          total: metrics.totalTokens,
-          conversation: metrics.totalTokens,
-          timestamp: Date.now(),
+          totalTokens: metrics.totalTokens,
+          promptTokens: metrics.promptTokens,
+          completionTokens: metrics.completionTokens,
+          timestamp: metrics.timestamp,
         });
         if (!success) {
-          setShowLimitModal(true);
           throw new Error("Token limit exceeded");
         }
       } catch (error) {
-        setShowLimitModal(true);
+        if (error instanceof Error && error.message.includes("Token limit")) {
+          setShowLimitModal(true);
+        }
         throw error;
       }
     },

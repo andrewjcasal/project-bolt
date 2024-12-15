@@ -1,12 +1,11 @@
-import React from 'react';
-import { TypewriterText } from './TypewriterText';
-import { InputArea } from './InputArea';
+import React, { useState, useCallback } from "react";
+import { TypewriterText } from "./TypewriterText";
+import { InputArea } from "./InputArea";
 import { QuickActionPrompts } from "./QuickActionPrompts";
-import { Message, Difficulty } from '../types/game';
-import { motion } from 'framer-motion';
-import { validateTokenAvailability } from '../utils/tokens/validation';
-import type { TokenUsage } from '../utils/tokens/types';
-import { TokenLimitModal } from "./TokenLimitModal";
+import { Message, Difficulty } from "../types/game";
+import { motion } from "framer-motion";
+import { validateTokenAvailability } from "../utils/tokens/validation";
+import type { TokenUsage } from "../utils/tokens/types";
 
 interface GamePageProps {
   messages: Message[];
@@ -14,27 +13,27 @@ interface GamePageProps {
   isGenerating: boolean;
   onSend: (message: string) => Promise<void>;
   onTypewriterComplete: () => void;
-  gameStatus: 'playing' | 'won' | 'lost';
+  gameStatus: "playing" | "won" | "lost";
   difficulty?: Difficulty;
   tokenUsage?: TokenUsage;
   onReturnToMain?: () => void;
 }
 
 const PortalIcon = () => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="none" 
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
     className="w-5 h-5 sm:w-6 sm:h-6"
-    stroke="currentColor" 
+    stroke="currentColor"
     strokeWidth="1.5"
   >
-    <path 
+    <path
       d="M12 4C16.4183 4 20 7.58172 20 12C20 16.4183 16.4183 20 12 20C7.58172 20 4 16.4183 4 12C4 7.58172 7.58172 4 12 4"
       strokeLinecap="round"
     />
-    <path 
-      d="M15 12L9 12M9 12L11 14M9 12L11 10" 
-      strokeLinecap="round" 
+    <path
+      d="M15 12L9 12M9 12L11 14M9 12L11 10"
+      strokeLinecap="round"
       strokeLinejoin="round"
     />
   </svg>
@@ -47,14 +46,24 @@ export const GamePage: React.FC<GamePageProps> = ({
   onSend,
   onTypewriterComplete,
   gameStatus,
-  difficulty = 'adaptive',
+  difficulty = "adaptive",
   tokenUsage,
-  onReturnToMain
+  onReturnToMain,
 }) => {
-  const hasEnoughTokens = !tokenUsage || validateTokenAvailability(tokenUsage, 'STORY_RESPONSE');
+  const hasEnoughTokens =
+    !tokenUsage || validateTokenAvailability(tokenUsage, "STORY_RESPONSE");
+
+  const [showEnergyWarning, setShowEnergyWarning] = useState(false);
+
+  const handleTypewriterComplete = useCallback(() => {
+    if (!hasEnoughTokens) {
+      setShowEnergyWarning(true);
+    }
+    onTypewriterComplete();
+  }, [hasEnoughTokens, onTypewriterComplete]);
 
   const handleQuickAction = (action: string) => {
-    if (!isLoading && !isGenerating && hasEnoughTokens) {
+    if (!isLoading && !isGenerating) {
       onSend(action);
     }
   };
@@ -79,7 +88,7 @@ export const GamePage: React.FC<GamePageProps> = ({
             <div key={`${message.content}-${index}`} className="px-2 sm:px-0">
               <TypewriterText
                 text={message.content}
-                onComplete={onTypewriterComplete}
+                onComplete={handleTypewriterComplete}
               />
             </div>
           ))}
@@ -87,12 +96,31 @@ export const GamePage: React.FC<GamePageProps> = ({
       </div>
 
       {gameStatus === "playing" && (
-        <>
-          {!hasEnoughTokens ? (
-            <TokenLimitModal onReturn={onReturnToMain} />
-          ) : (
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
-              <div className="w-full max-w-2xl mx-auto px-2 sm:px-4">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/90 to-transparent">
+          <div className="w-full max-w-2xl mx-auto px-2 sm:px-4">
+            {!hasEnoughTokens ? (
+              showEnergyWarning ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-center text-red-400 mb-4">
+                    Not enough energy to continue. Return to main page to start
+                    a new adventure.
+                  </div>
+                  <button
+                    onClick={onReturnToMain}
+                    className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    Return to Main Page
+                  </button>
+                </motion.div>
+              ) : (
+                <div />
+              )
+            ) : (
+              <>
                 <QuickActionPrompts
                   currentPrompt={messages[messages.length - 1]?.content || ""}
                   onActionSelect={handleQuickAction}
@@ -110,10 +138,10 @@ export const GamePage: React.FC<GamePageProps> = ({
                   showSparkles={false}
                   tokenUsage={tokenUsage}
                 />
-              </div>
-            </div>
-          )}
-        </>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

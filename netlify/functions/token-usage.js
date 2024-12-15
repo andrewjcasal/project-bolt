@@ -30,6 +30,11 @@ const validateTokens = (tokens) => {
   return Math.max(0, numTokens);
 };
 
+const wouldExceedLimit = (current, newTokens, limit = 5000) => {
+  const total = (current?.used || 0) + newTokens;
+  return total > limit;
+};
+
 exports.handler = async (event, context) => {
   const deviceId = event.path.split('/').pop();
   const headers = {
@@ -110,6 +115,18 @@ exports.handler = async (event, context) => {
       
       if (getError && getError.code !== 'PGRST116') throw getError;
       
+      if (wouldExceedLimit(current, validTokens)) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ 
+            error: 'Token limit would be exceeded',
+            current: current?.used || 0,
+            limit: 5000
+          }),
+          headers
+        };
+      }
+
       if (!current) {
         const initial = getDefaultUsage();
         const { data: newToken, error: upsertError } = await supabase
