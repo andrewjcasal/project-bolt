@@ -69,45 +69,81 @@ export const InputArea: React.FC<InputAreaProps> = ({
     }
   }, [currentIndex, fullPrompt, isTyping]);
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedInput = input.trim();
-    
-    if (trimmedInput && !isLoading && !isGenerating && !isTyping) {
-      // Check if we have enough tokens before sending
-      if (tokenUsage && !validateTokenAvailability(tokenUsage, 'INITIAL_PROMPT')) {
-        return;
+  const hasEnoughTokens =
+    !tokenUsage ||
+    validateTokenAvailability(
+      tokenUsage,
+      showSparkles ? "PROMPT_GENERATION" : "INITIAL_PROMPT"
+    );
+
+  // Check if we'll have enough tokens for both prompt generation and story response
+  const hasEnoughTokensForFullFlow =
+    !tokenUsage ||
+    (validateTokenAvailability(tokenUsage, "PROMPT_GENERATION") &&
+      validateTokenAvailability(tokenUsage, "STORY_RESPONSE"));
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmedInput = input.trim();
+
+      if (
+        trimmedInput &&
+        !isLoading &&
+        !isGenerating &&
+        !isTyping &&
+        (showSparkles ? hasEnoughTokensForFullFlow : hasEnoughTokens)
+      ) {
+        onSend(trimmedInput);
+        setInput("");
+        setFullPrompt("");
       }
-      onSend(trimmedInput);
-      setInput('');
-      setFullPrompt('');
-    }
-  }, [input, isLoading, isGenerating, isTyping, onSend, tokenUsage]);
+    },
+    [
+      input,
+      isLoading,
+      isGenerating,
+      isTyping,
+      onSend,
+      hasEnoughTokens,
+      hasEnoughTokensForFullFlow,
+      showSparkles,
+    ]
+  );
 
   const handleGeneratePrompt = useCallback(async () => {
     if (isGeneratingPrompt || isLoading || isGenerating || isTyping) return;
-    
+
     // Check if we have enough tokens before generating
-    if (tokenUsage && !validateTokenAvailability(tokenUsage, 'PROMPT_GENERATION')) {
+    if (!hasEnoughTokensForFullFlow) {
       return;
     }
-    
+
     setIsGeneratingPrompt(true);
     try {
       const prompt = await generatePrompt(difficulty, onTokensUsed, tokenUsage);
       setFullPrompt(prompt);
-      setInput('');
+      setInput("");
       setCurrentIndex(0);
       setIsTyping(true);
     } catch (error) {
-      console.error('Error generating prompt:', error);
+      console.error("Error generating prompt:", error);
     } finally {
       setIsGeneratingPrompt(false);
     }
-  }, [isGeneratingPrompt, isLoading, isGenerating, isTyping, difficulty, onTokensUsed, tokenUsage]);
+  }, [
+    isGeneratingPrompt,
+    isLoading,
+    isGenerating,
+    isTyping,
+    difficulty,
+    onTokensUsed,
+    tokenUsage,
+    hasEnoughTokensForFullFlow,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -122,11 +158,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
     }
   };
 
-  const hasEnoughTokens = !tokenUsage || validateTokenAvailability(tokenUsage, showSparkles ? 'PROMPT_GENERATION' : 'INITIAL_PROMPT');
-
-  const inputClasses = variant === 'box'
-    ? "w-full resize-none input-gradient border border-gray-800 rounded-2xl py-3 px-12 min-h-[48px] focus:outline-none focus:border-gray-600 text-white text-lg placeholder-gray-500 shadow-lg transition-colors duration-200"
-    : "w-full resize-none bg-transparent border-b border-gray-800 py-3 px-12 min-h-[48px] focus:outline-none focus:border-gray-600 text-white text-lg placeholder-gray-600 transition-colors duration-200";
+  const inputClasses =
+    variant === "box"
+      ? "w-full resize-none input-gradient border border-gray-800 rounded-2xl py-3 px-12 min-h-[48px] focus:outline-none focus:border-gray-600 text-white text-lg placeholder-gray-500 shadow-lg transition-colors duration-200"
+      : "w-full resize-none bg-transparent border-b border-gray-800 py-3 px-12 min-h-[48px] focus:outline-none focus:border-gray-600 text-white text-lg placeholder-gray-600 transition-colors duration-200";
 
   return (
     <motion.form
@@ -149,14 +184,36 @@ export const InputArea: React.FC<InputAreaProps> = ({
         {showSparkles && (
           <AnimatePresence mode="wait">
             <motion.button
-              key={isGeneratingPrompt ? 'generating' : 'normal'}
+              key={isGeneratingPrompt ? "generating" : "normal"}
               type="button"
               onClick={handleGeneratePrompt}
-              disabled={isLoading || isGenerating || isGeneratingPrompt || isTyping || !hasEnoughTokens}
+              disabled={
+                isLoading ||
+                isGenerating ||
+                isGeneratingPrompt ||
+                isTyping ||
+                !hasEnoughTokensForFullFlow
+              }
               className={`absolute left-3.5 flex items-center justify-center w-6 h-6
-                ${!isGeneratingPrompt && !isLoading && !isGenerating && !isTyping && hasEnoughTokens ? 'text-blue-400 hover:text-blue-300' : 'text-gray-600'}
+                ${
+                  !isGeneratingPrompt &&
+                  !isLoading &&
+                  !isGenerating &&
+                  !isTyping &&
+                  hasEnoughTokensForFullFlow
+                    ? "text-blue-400 hover:text-blue-300"
+                    : "text-gray-600"
+                }
                 transition-colors duration-200
-                ${(isLoading || isGenerating || isGeneratingPrompt || isTyping || !hasEnoughTokens) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                ${
+                  isLoading ||
+                  isGenerating ||
+                  isGeneratingPrompt ||
+                  isTyping ||
+                  !hasEnoughTokensForFullFlow
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                }`}
               initial={{ rotate: 0 }}
               animate={{ rotate: isGeneratingPrompt ? 360 : 0 }}
               transition={{ duration: 0.3 }}
@@ -176,18 +233,45 @@ export const InputArea: React.FC<InputAreaProps> = ({
           placeholder={placeholder}
           rows={1}
           className={inputClasses}
-          disabled={isLoading || isGenerating || isTyping || !hasEnoughTokens}
-          style={{ overflow: 'hidden' }}
+          disabled={
+            isLoading ||
+            isGenerating ||
+            isTyping ||
+            !(showSparkles ? hasEnoughTokensForFullFlow : hasEnoughTokens)
+          }
+          style={{ overflow: "hidden" }}
         />
 
         {showSendIcon && (
           <button
             type="submit"
-            disabled={isLoading || isGenerating || !input.trim() || isTyping || !hasEnoughTokens}
+            disabled={
+              isLoading ||
+              isGenerating ||
+              !input.trim() ||
+              isTyping ||
+              !(showSparkles ? hasEnoughTokensForFullFlow : hasEnoughTokens)
+            }
             className={`absolute right-3.5 flex items-center justify-center w-6 h-6
-              ${input.trim() && !isLoading && !isGenerating && !isTyping && hasEnoughTokens ? 'text-gray-400 hover:text-white' : 'text-gray-600'}
+              ${
+                input.trim() &&
+                !isLoading &&
+                !isGenerating &&
+                !isTyping &&
+                (showSparkles ? hasEnoughTokensForFullFlow : hasEnoughTokens)
+                  ? "text-gray-400 hover:text-white"
+                  : "text-gray-600"
+              }
               transition-colors duration-200
-              ${(!input.trim() || isLoading || isGenerating || isTyping || !hasEnoughTokens) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              ${
+                !input.trim() ||
+                isLoading ||
+                isGenerating ||
+                isTyping ||
+                !(showSparkles ? hasEnoughTokensForFullFlow : hasEnoughTokens)
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer"
+              }`}
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
