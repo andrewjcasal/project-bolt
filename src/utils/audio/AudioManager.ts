@@ -6,7 +6,8 @@ export class AudioManager {
   private sound: Howl | null = null;
   private retryCount = 0;
   private readonly maxRetries = 3;
-  private previousVolume = VOLUME.DEFAULT;
+  public previousVolume = VOLUME.DEFAULT;
+  private isFading = false;
 
   private constructor() {}
 
@@ -27,15 +28,17 @@ export class AudioManager {
         src: [AUDIO_TRACKS.AMBIENT],
         loop: true,
         volume: 0,
-        autoplay: true,
+        autoplay: false,
         html5: true,
         preload: true,
         format: ['mp3'],
         onload: () => {
+          console.log('Audio loaded successfully:', AUDIO_TRACKS.AMBIENT);
           this.retryCount = 0;
           resolve();
         },
-        onloaderror: () => {
+        onloaderror: (id, error) => {
+          console.error('Audio load error:', error);
           this.handleLoadError(reject);
         }
       });
@@ -55,7 +58,7 @@ export class AudioManager {
         src: [AUDIO_TRACKS.FALLBACK],
         loop: true,
         volume: 0,
-        autoplay: true,
+        autoplay: false,
         html5: true,
         preload: true,
         format: ['mp3']
@@ -70,11 +73,14 @@ export class AudioManager {
 
     const targetVolume = isMuted ? 0 : Math.max(VOLUME.MIN, Math.min(volume, VOLUME.MAX));
     
-    if (targetVolume === 0) {
-      this.previousVolume = this.sound.volume();
-      this.sound.fade(this.sound.volume(), 0, FADE_DURATION);
-    } else {
-      this.sound.fade(this.sound.volume(), targetVolume, FADE_DURATION);
+    if (this.sound.playing() && targetVolume === 0) {
+      this.pause();
+    }
+    
+    this.sound.volume(targetVolume);
+    
+    if (targetVolume > 0 && !this.sound.playing()) {
+      this.play();
     }
   }
 
@@ -93,5 +99,21 @@ export class AudioManager {
   cleanup(): void {
     this.sound?.unload();
     this.sound = null;
+  }
+
+  play(): void {
+    if (!this.sound) return;
+    try {
+      if (!this.sound.playing()) {
+        this.sound.play();
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  }
+
+  pause(): void {
+    if (!this.sound) return;
+    this.sound.pause();
   }
 }

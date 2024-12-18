@@ -5,7 +5,7 @@ import type { AudioState, AudioControls } from '../utils/audio/types';
 
 export const useAudio = (): AudioState & AudioControls => {
   const [isMuted, setIsMuted] = useState(true);
-  const [volume, setVolume] = useState(VOLUME.DEFAULT);
+  const [volume, setVolume] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioManager = useRef<AudioManager>(AudioManager.getInstance());
@@ -16,6 +16,8 @@ export const useAudio = (): AudioState & AudioControls => {
         await audioManager.current.initialize();
         setIsLoaded(true);
         setError(null);
+        audioManager.current.setVolume(0, true);
+        audioManager.current.previousVolume = VOLUME.DEFAULT;
       } catch (err) {
         setError(typeof err === 'string' ? err : 'Failed to load audio');
         setIsLoaded(false);
@@ -39,13 +41,20 @@ export const useAudio = (): AudioState & AudioControls => {
     if (!isLoaded) return;
 
     setIsMuted(prevMuted => {
-      if (prevMuted) {
-        const targetVolume = volume === 0 ? audioManager.current.getPreviousVolume() : volume;
+      const newMuted = !prevMuted;
+      if (newMuted) {
+        const previousVolume = volume;
+        setVolume(0);
+        audioManager.current.setVolume(0, true);
+        audioManager.current.previousVolume = previousVolume;
+      } else {
+        const targetVolume = audioManager.current.getPreviousVolume();
         if (targetVolume > 0) {
           setVolume(targetVolume);
+          audioManager.current.setVolume(targetVolume, false);
         }
       }
-      return !prevMuted;
+      return newMuted;
     });
   }, [isLoaded, volume]);
 
@@ -54,18 +63,24 @@ export const useAudio = (): AudioState & AudioControls => {
     
     const clampedVolume = Math.max(VOLUME.MIN, Math.min(newVolume, VOLUME.MAX));
     
+    setVolume(clampedVolume);
+    
     if (clampedVolume === 0) {
       setIsMuted(true);
-    } else if (isMuted) {
+    } else {
       setIsMuted(false);
+      if (volume === 0) {
+        audioManager.current.play();
+      }
     }
     
-    setVolume(clampedVolume);
-  }, [isLoaded, isMuted]);
+    audioManager.current.setVolume(clampedVolume, clampedVolume === 0);
+  }, [isLoaded, volume]);
 
   const startMusic = useCallback(() => {
     if (!isLoaded || isMuted || volume === 0) return;
     audioManager.current.setVolume(volume, false);
+    audioManager.current.play();
   }, [isLoaded, isMuted, volume]);
 
   const retryLoading = useCallback(async () => {
