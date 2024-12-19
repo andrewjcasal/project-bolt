@@ -17,6 +17,7 @@
     "framer-motion": "^10.16.4",
     "howler": "^2.2.4",
     "lucide-react": "0.294.0",
+    "netlify-cli": "^17.38.1",
     "openai": "^4.x.x",
     "react": "18.2.0",
     "react-canvas-confetti": "^1.4.0",
